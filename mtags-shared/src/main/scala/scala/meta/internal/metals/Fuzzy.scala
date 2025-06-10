@@ -52,7 +52,7 @@ class Fuzzy {
       query: CharSequence,
       symbol: CharSequence,
       skipNames: Int = 0
-  ): Boolean = genericMatches(query, symbol, skipNames, matchesNamePrefix)
+  ): Boolean = genericMatches(query, symbol, skipNames, (q, qa, qb, s, sa, sb) => matchesNamePrefix(q, qa, qb, s, sa, sb))
 
   /**
    * Returns true if the query matches the given symbol.
@@ -61,12 +61,14 @@ class Fuzzy {
    * @param symbol the symbol to test the query against like "scala/meta/inputs/Position#"
    * @param skipNames the number of names in the symbol to jump over. For regular search,
    *                  use 0. Use 1 to let the query "m.Pos" match "scala/meta/Position#Range."
+   * @param forgivingFirstChar if set to true will match the first character in a case insensitive way
    */
   def matches(
       query: CharSequence,
       symbol: CharSequence,
-      skipNames: Int = 0
-  ): Boolean = genericMatches(query, symbol, skipNames, matchesName)
+      skipNames: Int = 0,
+      forgivingFirstChar: Boolean = false
+  ): Boolean = genericMatches(query, symbol, skipNames, (q, qa, qb, s, sa, sb) => matchesName(q, qa, qb, s, sa, sb, forgivingFirstChar))
 
   private def genericMatches(
       query: CharSequence,
@@ -242,7 +244,8 @@ class Fuzzy {
       queryEndIdx: Int,
       symbol: CharSequence,
       symbolStartIdx: Int,
-      symbolEndIdx: Int
+      symbolEndIdx: Int,
+      forgivingFirstChar: Boolean = false
   ): Boolean = {
     // @param ql the last index in query at which qa.isUpper && charAt(qa) == charAt(sa)
     // @param sl the last index in symbol at which qa.isUpper && charAt(qa) == charAt(sa)
@@ -264,13 +267,25 @@ class Fuzzy {
       } else {
         val qq = query.charAt(qa)
         val ss = symbol.charAt(sa)
-        if (qq == ss) {
+        val matches = if (forgivingFirstChar && qa == queryStartIdx) {
+          // Only for the very first character of the query, allow case-insensitive matching
+          qq.toLower == ss.toLower
+        } else {
+          qq == ss
+        }
+        if (matches) {
           val qll = if (qq.isUpper) qa else ql
           val sll = if (ss.isUpper) sa else sl
           loop(qa + 1, qll, sa + 1, sll)
         } else if (qq.isLower) {
-          if (sl < 0 || ql < 0) false
-          else {
+          if (sl < 0 || ql < 0) {
+            if (forgivingFirstChar) {
+              // When forgiving mode is enabled, advance symbol position instead of failing
+              loop(qa, ql, sa + 1, sl)
+            } else {
+              false
+            }
+          } else {
             // Backtrack to ql and sl + 1, happens for example in query "Stop" for symbol "SStop",
             // we backtrack because the first two `S` should not align together.
             loop(ql, -1, sl + 1, -1)
