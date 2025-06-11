@@ -68,7 +68,12 @@ class Fuzzy {
       symbol: CharSequence,
       skipNames: Int = 0,
       forgivingFirstChar: Boolean = false
-  ): Boolean = genericMatches(query, symbol, skipNames, (q, qa, qb, s, sa, sb) => matchesName(q, qa, qb, s, sa, sb, forgivingFirstChar))
+  ): Boolean = {
+    val matcher =
+      if (forgivingFirstChar) matchesNameCaseInsensitiveFirstChar _
+      else matchesName _
+    genericMatches(query, symbol, skipNames, matcher)
+  }
 
   private def genericMatches(
       query: CharSequence,
@@ -235,6 +240,69 @@ class Fuzzy {
     if (curr < 0) new Delimiter(true, 0)
     else new Delimiter(false, curr + 1)
   }
+  
+  // Compares two names like query "inStr" and "InputFileStream".
+  // The substring are guaranteed to not have delimiters.
+  protected def matchesNameCaseInsensitiveFirstChar(
+      query: CharSequence,
+      queryStartIdx: Int,
+      queryEndIdx: Int,
+      symbol: CharSequence,
+      symbolStartIdx: Int,
+      symbolEndIdx: Int
+  ): Boolean = {
+    @tailrec
+    def loop(qa: Int, ql: Int, sa: Int, sl: Int): Boolean = {
+      if (qa >= queryEndIdx) {
+        true
+      } else if (sa >= symbolEndIdx) {
+        false
+      } else {
+        val qq = query.charAt(qa)
+        val ss = symbol.charAt(sa)
+        val isAtSegmentStart = sa == symbolStartIdx || (sa > symbolStartIdx && isDelimiter(symbol.charAt(sa - 1))) || ss.isUpper
+        val matches = if (qa == queryStartIdx && isAtSegmentStart) {
+          // Only for the very first character of the query at segment boundaries, allow case-insensitive matching
+          qq.toLower == ss.toLower
+        } else {
+          qq == ss
+        }
+        if (matches) {
+          val qll = if (qq.isUpper || (qa == queryStartIdx && isAtSegmentStart)) qa else ql
+          val sll = if (ss.isUpper || (qa == queryStartIdx && isAtSegmentStart)) sa else sl
+          loop(qa + 1, qll, sa + 1, sll)
+        } else if (qq.isLower) {
+          if (sl < 0 || ql < 0) {
+            if (qa == queryStartIdx) {
+              // Advance to the next CamelCase word boundary to try forgiving match
+              var nextSa = sa + 1
+              while (nextSa < symbolEndIdx &&
+                !symbol.charAt(nextSa).isUpper &&
+                (nextSa == symbolStartIdx || !isDelimiter(symbol.charAt(nextSa - 1)))) {
+                nextSa += 1
+              }
+              if (nextSa < symbolEndIdx) {
+                loop(qa, ql, nextSa, sl)
+              } else {
+                false
+              }
+            } else {
+              false
+            }
+          } else {
+            // Backtrack to ql and sl + 1, happens for example in query "Stop" for symbol "SStop",
+            // we backtrack because the first two `S` should not align together.
+            loop(ql, -1, sl + 1, -1)
+          }
+        } else {
+          loop(qa, ql, sa + 1, sl)
+        }
+      }
+    }
+
+    val backtickAdjust = if (symbol.charAt(symbolStartIdx) == '`') 1 else 0
+    loop(queryStartIdx, -1, symbolStartIdx + backtickAdjust, -1)
+  }
 
   // Compares two names like query "InStr" and "InputFileStream".
   // The substring are guaranteed to not have delimiters.
@@ -244,8 +312,7 @@ class Fuzzy {
       queryEndIdx: Int,
       symbol: CharSequence,
       symbolStartIdx: Int,
-      symbolEndIdx: Int,
-      forgivingFirstChar: Boolean = false
+      symbolEndIdx: Int
   ): Boolean = {
     // @param ql the last index in query at which qa.isUpper && charAt(qa) == charAt(sa)
     // @param sl the last index in symbol at which qa.isUpper && charAt(qa) == charAt(sa)
@@ -267,25 +334,13 @@ class Fuzzy {
       } else {
         val qq = query.charAt(qa)
         val ss = symbol.charAt(sa)
-        val matches = if (forgivingFirstChar && qa == queryStartIdx) {
-          // Only for the very first character of the query, allow case-insensitive matching
-          qq.toLower == ss.toLower
-        } else {
-          qq == ss
-        }
-        if (matches) {
+        if (qq == ss) {
           val qll = if (qq.isUpper) qa else ql
           val sll = if (ss.isUpper) sa else sl
           loop(qa + 1, qll, sa + 1, sll)
         } else if (qq.isLower) {
-          if (sl < 0 || ql < 0) {
-            if (forgivingFirstChar) {
-              // When forgiving mode is enabled, advance symbol position instead of failing
-              loop(qa, ql, sa + 1, sl)
-            } else {
-              false
-            }
-          } else {
+          if (sl < 0 || ql < 0) false
+          else {
             // Backtrack to ql and sl + 1, happens for example in query "Stop" for symbol "SStop",
             // we backtrack because the first two `S` should not align together.
             loop(ql, -1, sl + 1, -1)

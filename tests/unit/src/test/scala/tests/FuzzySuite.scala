@@ -76,6 +76,9 @@ class FuzzySuite extends BaseSuite {
   checkOK("coll.TrieMap", "scala/collection/concurrent/TrieMap.")
   checkOK("m.Pos.", "scala/meta/Position.Range#")
   checkNO("m.Posi.", "scala/meta/Position.")
+  
+  checkForgiving("nner", "a/Inner#", false)
+  checkForgiving("inne", "a/Inner#", true)
 
   // backticked identifiers
   checkOK("fluent", "a/B.`fluent name`().")
