@@ -58,8 +58,10 @@ class FuzzySuite extends BaseSuite {
   }
 
   // Basic case-insensitive matching
+  checkForgiving("name", "name", true)
   checkForgiving("name", "Name", true)
-  checkForgiving("Name", "name", true)  
+  checkForgiving("Name", "name", false)
+  checkForgiving("Name", "Name", true)
   checkForgiving("test", "Test", true)
   checkForgiving("xame", "Name", false) // different first character should still fail
 
@@ -79,6 +81,7 @@ class FuzzySuite extends BaseSuite {
   
   checkForgiving("nner", "a/Inner#", false)
   checkForgiving("inne", "a/Inner#", true)
+  checkForgiving("nner", "a/InnerNner#", true)
 
   // backticked identifiers
   checkOK("fluent", "a/B.`fluent name`().")
