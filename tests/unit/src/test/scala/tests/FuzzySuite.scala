@@ -83,8 +83,8 @@ class FuzzySuite extends BaseSuite {
   checkForgiving("NAMYO", "longNameYouCouldForget", false)
   checkForgiving("ameYo", "longNameYouCouldForget", false)
 
-  checkForgiving("_name", "_Name", false)     // underscore as first char
-  checkForgiving("na1", "Name1", true)     // numbers elsewhere
+  checkForgiving("_name", "_Name", false)
+  checkForgiving("na1", "Name1", true)
   checkForgiving("fi2B", "fizBaz2Boo", true)
   checkForgiving("b2B", "fizBaz2Boo", true)
 

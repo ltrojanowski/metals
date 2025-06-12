@@ -322,7 +322,7 @@ class Fuzzy {
         val qChar = query.charAt(queryCurrentPos)
         val sChar = symbol.charAt(symbolCurrentPos)
         if (queryCurrentPos == queryStartIdx &&       // we are at the first letter of the query string
-          qChar == sChar || qChar.toUpper == sChar) { // therefore we also check if it matches the upper case character
+          (qChar == sChar || qChar.toUpper == sChar)) { // therefore we also check if it matches the upper case character
           loop(queryCurrentPos + 1, queryCurrentPos, symbolCurrentPos + 1, symbolCurrentPos)
         } else if (qChar == sChar) {
           val newQueryUpperMatchPos = if (qChar.isUpper) queryCurrentPos else queryLastBacktrackingPos
