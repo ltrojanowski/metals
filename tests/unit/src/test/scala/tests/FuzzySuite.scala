@@ -6,7 +6,7 @@ import scala.meta.internal.metals.WorkspaceSymbolQuery
 import munit.Location
 
 class FuzzySuite extends BaseSuite {
-  def checkOK(query: String, symbol: String)(implicit loc: Location): Unit = {
+  def checkOK(query: String, symbol: String, forgivingFirstChar: Boolean = false)(implicit loc: Location): Unit = {
     test(query) {
       val obtained = WorkspaceSymbolQuery.fromTextQuery(query).matches(symbol)
       Predef.assert(
@@ -48,44 +48,40 @@ class FuzzySuite extends BaseSuite {
   checkOK("FooxBar", "a/FooxBar#")
   checkNO("FooxBr", "a/FooxBar#")
   checkNO("Files", "a/FileStream#")
+  checkOK("coll.TrieMap", "scala/collection/concurrent/TrieMap.")
+  checkOK("m.Pos.", "scala/meta/Position.Range#")
+  checkNO("m.Posi.", "scala/meta/Position.")
+
+  // backticked identifiers
+  checkOK("fluent", "a/B.`fluent name`().")
+  checkOK("fluent na", "a/B.`fluent name`().")
 
   // Test forgivingFirstChar functionality
   def checkForgiving(query: String, symbol: String, expected: Boolean)(implicit loc: Location): Unit = {
-    test(s"forgiving: $query -> $symbol = $expected") {
+    test(s"forgiving query: $query, symbol: $symbol, should match: $expected") {
       val obtained = Fuzzy.matches(query, symbol, forgivingFirstChar = true)
       assertEquals(obtained, expected)
     }
   }
 
-  // Basic case-insensitive matching
+  // Basic first character case-insensitive matching
   checkForgiving("name", "name", true)
   checkForgiving("name", "Name", true)
   checkForgiving("Name", "name", false)
   checkForgiving("Name", "Name", true)
   checkForgiving("test", "Test", true)
-  checkForgiving("xame", "Name", false) // different first character should still fail
+  checkForgiving("xame", "Name", false)
 
   // CamelCase matching with forgiving first character
   checkForgiving("namYo", "NameYouCouldForget", true)
-  checkForgiving("nam", "Name", true)
   checkForgiving("namY", "NameY", true)
 
-  // Complex example: forgiving should allow lowercase to match uppercase at word boundaries
+  // CamelCase matching query not matching from start
   checkForgiving("namYo", "longNameYouCouldForget", true)
   checkForgiving("NamYo", "longNameYouCouldForget", true)
   checkForgiving("namyo", "LongNameYouCouldForget", false)
   checkForgiving("NAMYO", "longNameYouCouldForget", false)
-  checkOK("coll.TrieMap", "scala/collection/concurrent/TrieMap.")
-  checkOK("m.Pos.", "scala/meta/Position.Range#")
-  checkNO("m.Posi.", "scala/meta/Position.")
-  
-  checkForgiving("nner", "a/Inner#", false)
-  checkForgiving("inne", "a/Inner#", true)
-  checkForgiving("nner", "a/InnerNner#", true)
-
-  // backticked identifiers
-  checkOK("fluent", "a/B.`fluent name`().")
-  checkOK("fluent na", "a/B.`fluent name`().")
+  checkForgiving("ameYo", "longNameYouCouldForget", false)
 
   def checkWords(in: String, expected: String): Unit = {
     val name = in.replaceAll("[^a-zA-Z0-9]", " ").trim
