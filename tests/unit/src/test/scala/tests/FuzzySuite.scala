@@ -6,7 +6,7 @@ import scala.meta.internal.metals.WorkspaceSymbolQuery
 import munit.Location
 
 class FuzzySuite extends BaseSuite {
-  def checkOK(query: String, symbol: String, forgivingFirstChar: Boolean = false)(implicit loc: Location): Unit = {
+  def checkOK(query: String, symbol: String)(implicit loc: Location): Unit = {
     test(query) {
       val obtained = WorkspaceSymbolQuery.fromTextQuery(query).matches(symbol)
       Predef.assert(
@@ -82,6 +82,16 @@ class FuzzySuite extends BaseSuite {
   checkForgiving("namyo", "LongNameYouCouldForget", false)
   checkForgiving("NAMYO", "longNameYouCouldForget", false)
   checkForgiving("ameYo", "longNameYouCouldForget", false)
+
+  checkForgiving("_name", "_Name", false)     // underscore as first char
+  checkForgiving("na1", "Name1", true)     // numbers elsewhere
+  checkForgiving("fi2B", "fizBaz2Boo", true)
+  checkForgiving("b2B", "fizBaz2Boo", true)
+
+  checkForgiving("hTML", "HTMLParser", true)
+  checkForgiving("xML", "XMLDocument", true)
+  checkForgiving("uRL", "URLBuilder", true)
+  checkForgiving("jSON", "JSONProcessor", true)
 
   def checkWords(in: String, expected: String): Unit = {
     val name = in.replaceAll("[^a-zA-Z0-9]", " ").trim

@@ -321,16 +321,15 @@ class Fuzzy {
       } else {
         val qChar = query.charAt(queryCurrentPos)
         val sChar = symbol.charAt(symbolCurrentPos)
-        if (queryCurrentPos == queryStartIdx &&    // we are at the first letter of the query string
-          qChar == sChar || qChar.toUpper == sChar // therefore we also check if it matches the upper case character
-        ) {
+        if (queryCurrentPos == queryStartIdx &&       // we are at the first letter of the query string
+          qChar == sChar || qChar.toUpper == sChar) { // therefore we also check if it matches the upper case character
           loop(queryCurrentPos + 1, queryCurrentPos, symbolCurrentPos + 1, symbolCurrentPos)
         } else if (qChar == sChar) {
           val newQueryUpperMatchPos = if (qChar.isUpper) queryCurrentPos else queryLastBacktrackingPos
           val newSymbolUpperMatchPos = if (sChar.isUpper) symbolCurrentPos else symbolLastBacktrackingPos
           loop(queryCurrentPos + 1, newQueryUpperMatchPos, symbolCurrentPos + 1, newSymbolUpperMatchPos)
         } else if (queryCurrentPos == queryStartIdx && sChar.isUpper) {
-          // wa want to skip forward towards the next upper case char in the symbol to not match partial
+          // we want to skip forward towards the next upper case char in the symbol to not match partial
           // camel case symbol segments and preserve the spirit of the regular matcher
           // (i.e. the query 'melCas' should not match the symbol 'CamelCase'
           var nextSymbolPos = symbolCurrentPos + 1
