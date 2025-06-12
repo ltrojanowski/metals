@@ -292,6 +292,12 @@ class Fuzzy {
     loop(queryStartIdx, -1, symbolStartIdx + backtickAdjust, -1)
   }
 
+  /*
+  q: va s: java
+  0 | v | j |
+  1 |
+   */
+
   /**
    * Compares two names like query "inStr" and "InputFileStream"
    *
@@ -307,6 +313,11 @@ class Fuzzy {
       symbolEndIdx: Int
   ): Boolean = {
 
+    /*
+    va java
+    v | j
+
+     */
     @tailrec
     def loop(
         queryPos: Int,
@@ -332,10 +343,12 @@ class Fuzzy {
           val newSymbolBP =
             if (sChar.isUpper) symbolPos else symbolBacktrackingPos
           loop(queryPos + 1, newQueryBP, symbolPos + 1, newSymbolBP)
-        } else if (queryPos == queryStartIdx && sChar.isUpper) {
+        } else if (queryPos == queryStartIdx && (sChar.isUpper || symbolPos == symbolStartIdx)) {
           // we want to skip forward towards the next upper case char in the symbol to not match partial
           // camel case symbol segments and preserve the spirit of the regular matcher
           // (i.e. the query 'melCas' should not match the symbol 'CamelCase'
+          // we also dont' want to match partial lower case queries which match not from the start
+          // 'va' should not match 'java'
           var nextSymbolPos = symbolPos + 1
           while (
             nextSymbolPos < symbolEndIdx && symbol.charAt(nextSymbolPos).isLower

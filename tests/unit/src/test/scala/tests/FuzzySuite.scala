@@ -97,6 +97,10 @@ class FuzzySuite extends BaseSuite {
   checkForgiving("uRL", "URLBuilder", true)
   checkForgiving("jSON", "JSONProcessor", true)
 
+  checkForgiving("va", "java", false)
+  checkForgiving("va", "val", true)
+  checkForgiving("ja", "java", true)
+
   def checkWords(in: String, expected: String): Unit = {
     val name = in.replaceAll("[^a-zA-Z0-9]", " ").trim
     val start = name.lastIndexOf(' ') + 1
