@@ -57,10 +57,12 @@ class FuzzySuite extends BaseSuite {
   checkOK("fluent na", "a/B.`fluent name`().")
 
   // Test forgivingFirstChar functionality
-  def checkForgiving(query: String, symbol: String, shouldMatch: Boolean)(implicit
-      loc: Location
+  def checkForgiving(query: String, symbol: String, shouldMatch: Boolean)(
+      implicit loc: Location
   ): Unit = {
-    test(s"forgiving query: $query on symbol: $symbol ${if (shouldMatch) "should match" else  "should not match"}") {
+    test(
+      s"forgiving query: $query on symbol: $symbol ${if (shouldMatch) "should match" else "should not match"}"
+    ) {
       val obtained = Fuzzy.matches(query, symbol, forgivingFirstChar = true)
       assertEquals(obtained, shouldMatch)
     }
