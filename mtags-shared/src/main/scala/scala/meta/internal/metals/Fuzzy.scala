@@ -52,7 +52,7 @@ class Fuzzy {
       query: CharSequence,
       symbol: CharSequence,
       skipNames: Int = 0
-  ): Boolean = genericMatches(query, symbol, skipNames, (q, qa, qb, s, sa, sb) => matchesNamePrefix(q, qa, qb, s, sa, sb))
+  ): Boolean = genericMatches(query, symbol, skipNames, matchesNamePrefix)
 
   /**
    * Returns true if the query matches the given symbol.
@@ -299,55 +299,72 @@ class Fuzzy {
    * matches also upper case characters.
    */
   protected def forgivingFirstCharMatcher(
-    query: CharSequence,
-    queryStartIdx: Int,
-    queryEndIdx: Int,
-    symbol: CharSequence,
-    symbolStartIdx: Int,
-    symbolEndIdx: Int
+      query: CharSequence,
+      queryStartIdx: Int,
+      queryEndIdx: Int,
+      symbol: CharSequence,
+      symbolStartIdx: Int,
+      symbolEndIdx: Int
   ): Boolean = {
-    
+
     @tailrec
     def loop(
-      queryCurrentPos: Int,
-      queryLastBacktrackingPos: Int,
-      symbolCurrentPos: Int,
-      symbolLastBacktrackingPos: Int
+        queryPos: Int,
+        queryBacktrackingPos: Int,
+        symbolPos: Int,
+        symbolBacktrackingPos: Int
     ): Boolean = {
-      if (queryCurrentPos >= queryEndIdx) { // exhausted query string on symbol string
+      if (queryPos >= queryEndIdx) { // exhausted query string on symbol string
         true
-      } else if (symbolCurrentPos >= symbolEndIdx) { // run out of symbol string to exhaust query
+      } else if (symbolPos >= symbolEndIdx) { // run out of symbol string to exhaust query
         false
       } else {
-        val qChar = query.charAt(queryCurrentPos)
-        val sChar = symbol.charAt(symbolCurrentPos)
-        if (queryCurrentPos == queryStartIdx &&       // we are at the first letter of the query string
-          (qChar == sChar || qChar.toUpper == sChar)) { // therefore we also check if it matches the upper case character
-          loop(queryCurrentPos + 1, queryCurrentPos, symbolCurrentPos + 1, symbolCurrentPos)
+        val qChar = query.charAt(queryPos)
+        val sChar = symbol.charAt(symbolPos)
+        if (
+          queryPos == queryStartIdx && // we are at the first letter of the query string
+          (qChar == sChar || qChar.toUpper == sChar) // therefore we also check if it matches the upper case character
+        ) {
+          loop(queryPos + 1, queryPos, symbolPos + 1, symbolPos)
         } else if (qChar == sChar) {
-          val newQueryUpperMatchPos = if (qChar.isUpper) queryCurrentPos else queryLastBacktrackingPos
-          val newSymbolUpperMatchPos = if (sChar.isUpper) symbolCurrentPos else symbolLastBacktrackingPos
-          loop(queryCurrentPos + 1, newQueryUpperMatchPos, symbolCurrentPos + 1, newSymbolUpperMatchPos)
-        } else if (queryCurrentPos == queryStartIdx && sChar.isUpper) {
+          val newQueryBP =
+            if (qChar.isUpper) queryPos else queryBacktrackingPos
+          val newSymbolBP =
+            if (sChar.isUpper) symbolPos else symbolBacktrackingPos
+          loop(queryPos + 1, newQueryBP, symbolPos + 1, newSymbolBP)
+        } else if (queryPos == queryStartIdx && sChar.isUpper) {
           // we want to skip forward towards the next upper case char in the symbol to not match partial
           // camel case symbol segments and preserve the spirit of the regular matcher
           // (i.e. the query 'melCas' should not match the symbol 'CamelCase'
-          var nextSymbolPos = symbolCurrentPos + 1
-          while (nextSymbolPos < symbolEndIdx && symbol.charAt(nextSymbolPos).isLower) {
+          var nextSymbolPos = symbolPos + 1
+          while (
+            nextSymbolPos < symbolEndIdx && symbol.charAt(nextSymbolPos).isLower
+          ) {
             nextSymbolPos += 1
           }
-          loop(queryCurrentPos, queryLastBacktrackingPos, nextSymbolPos, symbolLastBacktrackingPos)
-        } else if (qChar.isLower && queryCurrentPos != queryStartIdx) {
-          if (queryLastBacktrackingPos < 0 || symbolLastBacktrackingPos < 0) false // no previous match so nowhere to backtrack
+          loop(
+            queryPos,
+            queryBacktrackingPos,
+            nextSymbolPos,
+            symbolBacktrackingPos
+          )
+        } else if (qChar.isLower && queryPos != queryStartIdx) {
+          if (queryBacktrackingPos < 0 || symbolBacktrackingPos < 0)
+            false // no previous match so nowhere to backtrack
           else {
-            loop(queryLastBacktrackingPos, -1, symbolCurrentPos + 1, -1)
+            loop(queryBacktrackingPos, -1, symbolPos + 1, -1)
           }
         } else { // no match, but we are at an upper case or first character of query string so we keep looking
-          loop(queryCurrentPos, queryLastBacktrackingPos, symbolCurrentPos + 1, symbolLastBacktrackingPos)
+          loop(
+            queryPos,
+            queryBacktrackingPos,
+            symbolPos + 1,
+            symbolBacktrackingPos
+          )
         }
       }
     }
-    
+
     val backtickAdjust = if (symbol.charAt(symbolStartIdx) == '`') 1 else 0
     loop(queryStartIdx, -1, symbolStartIdx + backtickAdjust, -1)
   }

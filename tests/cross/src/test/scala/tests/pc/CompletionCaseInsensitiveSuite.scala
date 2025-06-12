@@ -16,7 +16,7 @@ class CompletionCaseInsensitiveSuite extends BaseCompletionSuite {
       |deprecatedName scala
       |""".stripMargin
   )
-  
+
   check(
     "use case insensitive comparison for first character of query at the beginning of the symbol",
     """
@@ -77,6 +77,5 @@ class CompletionCaseInsensitiveSuite extends BaseCompletionSuite {
       |IllegalThreadStateException java.lang
       |""".stripMargin
   )
-
 
 }

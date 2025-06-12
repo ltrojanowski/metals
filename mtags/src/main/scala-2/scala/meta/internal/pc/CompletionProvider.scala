@@ -557,12 +557,13 @@ class CompletionProvider(
       }
       val isTypeMember = kind == CompletionListKind.Type
       params.checkCanceled()
-      
+
       val query = completions.name.toString
       val queryStartsWithLowercase = query.headOption.forall(_.isLower)
       val matchingResults = completions.matchingResults { entered => name =>
         if (isTypeMember) CompletionFuzzy.matchesSubCharacters(entered, name)
-        else if (queryStartsWithLowercase) CompletionFuzzy.matches(entered, name, forgivingFirstChar = true)
+        else if (queryStartsWithLowercase)
+          CompletionFuzzy.matches(entered, name, forgivingFirstChar = true)
         else CompletionFuzzy.matches(entered, name)
       }
 
