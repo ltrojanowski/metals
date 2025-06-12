@@ -292,12 +292,6 @@ class Fuzzy {
     loop(queryStartIdx, -1, symbolStartIdx + backtickAdjust, -1)
   }
 
-  /*
-  q: va s: java
-  0 | v | j |
-  1 |
-   */
-
   /**
    * Compares two names like query "inStr" and "InputFileStream"
    *
@@ -313,11 +307,6 @@ class Fuzzy {
       symbolEndIdx: Int
   ): Boolean = {
 
-    /*
-    va java
-    v | j
-
-     */
     @tailrec
     def loop(
         queryPos: Int,
